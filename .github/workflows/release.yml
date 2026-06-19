@@ -38,56 +38,8 @@ jobs:
           name: windows-x64
           path: desktop-pet-*-windows-x64.zip
 
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Build
-        run: cargo build --release
-      - name: Prepare artifact
-        run: |
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          DIR="desktop-pet-${TAG}-macos-x64"
-          mkdir -p "$DIR"
-          cp target/release/desktop-pet "$DIR/"
-          cp -r assets "$DIR/"
-          cp -r config "$DIR/"
-          cp README.md "$DIR/"
-          tar czf "${DIR}.tar.gz" "$DIR"
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-x64
-          path: desktop-pet-*-macos-x64.tar.gz
-
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libgtk-3-dev
-      - name: Build
-        run: cargo build --release
-      - name: Prepare artifact
-        run: |
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          DIR="desktop-pet-${TAG}-linux-x64"
-          mkdir -p "$DIR"
-          cp target/release/desktop-pet "$DIR/"
-          cp -r assets "$DIR/"
-          cp -r config "$DIR/"
-          cp README.md "$DIR/"
-          tar czf "${DIR}.tar.gz" "$DIR"
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-x64
-          path: desktop-pet-*-linux-x64.tar.gz
-
   release:
-    needs: [build-windows, build-macos, build-linux]
+    needs: [build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -102,3 +54,6 @@ jobs:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           generate_release_notes: true
           files: artifacts/*
+
+  # macOS and Linux builds are not supported yet because the app uses Win32 APIs.
+  # To add cross-platform support, refactor window/rendering code with a platform abstraction layer.
