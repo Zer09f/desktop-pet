@@ -1,0 +1,530 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>桌宠精灵表生成器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: #fff; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 30px 0; }
+        header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        header p { font-size: 1.1em; opacity: 0.9; }
+        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; }
+        .panel { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+        .panel h2 { font-size: 1.4em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .mode-selector { display: flex; gap: 15px; margin-bottom: 25px; }
+        .mode-btn { flex: 1; padding: 15px; border: 2px solid rgba(255,255,255,0.3); border-radius: 10px; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; transition: all 0.3s; text-align: center; }
+        .mode-btn:hover { background: rgba(255,255,255,0.2); border-color: #4ecdc4; }
+        .mode-btn.active { background: rgba(78, 205, 196, 0.3); border-color: #4ecdc4; }
+        .mode-btn h3 { font-size: 1.1em; margin-bottom: 8px; }
+        .mode-btn p { font-size: 0.85em; opacity: 0.8; }
+        .upload-section { display: none; }
+        .upload-section.active { display: block; }
+        .full-sheet-upload { border: 3px dashed rgba(255,255,255,0.4); border-radius: 15px; padding: 60px 20px; text-align: center; cursor: pointer; transition: all 0.3s; margin-bottom: 20px; }
+        .full-sheet-upload:hover { border-color: #4ecdc4; background: rgba(78, 205, 196, 0.1); }
+        .full-sheet-upload.dragover { border-color: #4ecdc4; background: rgba(78, 205, 196, 0.2); }
+        .full-sheet-upload .icon { font-size: 4em; margin-bottom: 15px; }
+        .states-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .state-card { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; border: 2px solid transparent; transition: all 0.3s; }
+        .state-card:hover { border-color: rgba(255,255,255,0.3); }
+        .state-card.loaded { border-color: #4ecdc4; }
+        .state-card .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .state-card h4 { font-size: 1em; display: flex; align-items: center; gap: 8px; }
+        .mirror-btn { background: linear-gradient(135deg, #9b59b6, #8e44ad); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85em; transition: all 0.3s; display: flex; align-items: center; gap: 4px; }
+        .mirror-btn:hover { transform: scale(1.05); box-shadow: 0 3px 10px rgba(155, 89, 182, 0.4); }
+        .mirror-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .state-card .frames { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .frame-slot { aspect-ratio: 1; background: rgba(0,0,0,0.3); border: 2px dashed rgba(255,255,255,0.3); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; overflow: hidden; position: relative; }
+        .frame-slot:hover { border-color: #4ecdc4; background: rgba(78, 205, 196, 0.1); }
+        .frame-slot.has-image { border-style: solid; border-color: #4ecdc4; }
+        .frame-slot img { width: 100%; height: 100%; object-fit: contain; }
+        .frame-slot .frame-num { font-size: 0.8em; opacity: 0.6; }
+        .frame-slot .remove-btn { position: absolute; top: 2px; right: 2px; background: rgba(255,0,0,0.7); border: none; color: #fff; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; display: none; font-size: 12px; line-height: 20px; }
+        .frame-slot:hover .remove-btn { display: block; }
+        .preview-area { min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .preview-canvas { max-width: 100%; border: 2px solid rgba(255,255,255,0.3); border-radius: 10px; background: repeating-conic-gradient(#808080 0% 25%, #c0c0c0 0% 50%) 50% / 20px 20px; }
+        .preview-placeholder { text-align: center; opacity: 0.6; }
+        .preview-placeholder .icon { font-size: 4em; margin-bottom: 15px; }
+        .controls { display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, #4ecdc4, #44bd9e); color: #fff; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(78, 205, 196, 0.4); }
+        .btn-secondary { background: rgba(255,255,255,0.2); color: #fff; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.3); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .settings { margin-top: 20px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px; }
+        .settings h3 { margin-bottom: 15px; font-size: 1.1em; }
+        .settings-row { display: flex; gap: 20px; flex-wrap: wrap; }
+        .setting-item { flex: 1; min-width: 150px; }
+        .setting-item label { display: block; margin-bottom: 8px; font-size: 0.9em; opacity: 0.9; }
+        .setting-item input, .setting-item select { width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; font-size: 1em; }
+        .setting-item input:focus, .setting-item select:focus { outline: none; border-color: #4ecdc4; }
+        .status-bar { margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 0.9em; }
+        .status-bar .progress { height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+        .status-bar .progress-bar { height: 100%; background: linear-gradient(90deg, #4ecdc4, #44bd9e); border-radius: 2px; transition: width 0.3s; }
+        .tips { margin-top: 30px; padding: 20px; background: rgba(78, 205, 196, 0.1); border-radius: 10px; border-left: 4px solid #4ecdc4; }
+        .tips h3 { margin-bottom: 10px; color: #4ecdc4; }
+        .tips ul { list-style: none; padding: 0; }
+        .tips li { padding: 5px 0; padding-left: 20px; position: relative; }
+        .tips li:before { content: "•"; position: absolute; left: 0; color: #4ecdc4; }
+        .hidden { display: none; }
+        .layout-info { background: rgba(78, 205, 196, 0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9em; }
+        .layout-info h4 { margin-bottom: 10px; color: #4ecdc4; }
+        .layout-info .row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+        .layout-info .row-num { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        .mirror-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .mirror-group .btn { flex: 1; justify-content: center; }
+        @media (max-width: 900px) { .main-content { grid-template-columns: 1fr; } .states-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>像素桌宠精灵表生成器</h1>
+            <p>上传图片，创建你的专属桌宠动画（支持左右行走分离）</p>
+        </header>
+        <div class="mode-selector">
+            <div class="mode-btn active" data-mode="single" onclick="switchMode('single')">
+                <h3>单张上传</h3>
+                <p>逐帧上传图片，精细控制每个动画</p>
+            </div>
+            <div class="mode-btn" data-mode="full" onclick="switchMode('full')">
+                <h3>整张上传</h3>
+                <p>直接上传已制作好的精灵表</p>
+            </div>
+            <div class="mode-btn" data-mode="auto" onclick="switchMode('auto')">
+                <h3>智能生成</h3>
+                <p>上传一张图片，自动生成多帧动画</p>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="panel">
+                <h2>上传区域</h2>
+                <div class="layout-info">
+                    <h4>精灵表布局（8行 x 4列）</h4>
+                    <div class="row"><span class="row-num">行0</span> Idle 待机</div>
+                    <div class="row"><span class="row-num">行1</span> Walk Right 向右行走</div>
+                    <div class="row"><span class="row-num">行2</span> Walk Left 向左行走</div>
+                    <div class="row"><span class="row-num">行3</span> Sleep 睡觉</div>
+                    <div class="row"><span class="row-num">行4</span> Eat 进食</div>
+                    <div class="row"><span class="row-num">行5</span> Happy 开心</div>
+                    <div class="row"><span class="row-num">行6</span> Startled 受惊</div>
+                    <div class="row"><span class="row-num">行7</span> Sit 坐下</div>
+                </div>
+                <div class="mirror-group">
+                    <button class="btn btn-secondary" onclick="mirrorState('walk_right', 'walk_left')" id="mirrorRtoL">
+                        ➡️ 镜像到 ⬅️
+                    </button>
+                    <button class="btn btn-secondary" onclick="mirrorState('walk_left', 'walk_right')" id="mirrorLtoR">
+                        ⬅️ 镜像到 ➡️
+                    </button>
+                </div>
+                <div id="singleUpload" class="upload-section active">
+                    <div class="states-grid" id="statesGrid"></div>
+                </div>
+                <div id="fullUpload" class="upload-section">
+                    <div class="full-sheet-upload" id="dropZone">
+                        <div class="icon">📁</div>
+                        <h3>拖放精灵表到此处</h3>
+                        <p>或点击选择文件</p>
+                        <p style="margin-top: 10px; font-size: 0.85em; opacity: 0.7;">格式：4列 x 8行，每帧等宽等高</p>
+                    </div>
+                    <input type="file" id="fullSheetInput" accept="image/*" class="hidden">
+                </div>
+                <div id="autoUpload" class="upload-section">
+                    <div class="full-sheet-upload" id="autoDropZone">
+                        <div class="icon">🎨</div>
+                        <h3>上传一张角色图片</h3>
+                        <p>系统将自动生成各状态动画</p>
+                        <p style="margin-top: 10px; font-size: 0.85em; opacity: 0.7;">建议：透明背景的 PNG，尺寸 64x64 或 128x128</p>
+                    </div>
+                    <input type="file" id="autoInput" accept="image/*" class="hidden">
+                </div>
+                <div class="settings">
+                    <h3>输出设置</h3>
+                    <div class="settings-row">
+                        <div class="setting-item">
+                            <label>帧宽度 (px)</label>
+                            <input type="number" id="frameWidth" value="32" min="16" max="256">
+                        </div>
+                        <div class="setting-item">
+                            <label>帧高度 (px)</label>
+                            <input type="number" id="frameHeight" value="32" min="16" max="256">
+                        </div>
+                        <div class="setting-item">
+                            <label>每行帧数</label>
+                            <input type="number" id="framesPerRow" value="4" min="1" max="8">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <h2>预览</h2>
+                <div class="preview-area" id="previewArea">
+                    <div class="preview-placeholder">
+                        <div class="icon">🖼️</div>
+                        <p>上传图片后此处显示预览</p>
+                    </div>
+                    <canvas id="previewCanvas" class="preview-canvas hidden"></canvas>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-primary" id="generateBtn" onclick="generateSpriteSheet()" disabled>生成精灵表</button>
+                    <button class="btn btn-secondary" id="downloadBtn" onclick="downloadSpriteSheet()" disabled>下载 PNG</button>
+                    <button class="btn btn-secondary" onclick="clearAll()">清空全部</button>
+                </div>
+                <div class="status-bar" id="statusBar">
+                    <div id="statusText">就绪 - 请上传图片开始制作</div>
+                    <div class="progress">
+                        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tips">
+            <h3>使用提示</h3>
+            <ul>
+                <li>精灵表格式：4列 x 8行，支持左右行走分离</li>
+                <li>行1为向右行走，行2为向左行走（镜像或独立绘制）</li>
+                <li>点击"镜像"按钮可快速将一个方向的动画复制并翻转到另一个方向</li>
+                <li>建议使用透明背景的 PNG 图片</li>
+                <li>每帧尺寸应保持一致，推荐 32x32 或 64x64 像素</li>
+                <li>生成后可直接下载，替换项目中的 assets/pet.png</li>
+                <li>需配合修改 config.json 的 rows 为 8</li>
+            </ul>
+        </div>
+    </div>
+    <script>
+        const STATES = [
+            { id: 'idle', name: 'Idle', icon: '😌', desc: '待机', row: 0 },
+            { id: 'walk_right', name: 'Walk Right', icon: '➡️', desc: '向右行走', row: 1 },
+            { id: 'walk_left', name: 'Walk Left', icon: '⬅️', desc: '向左行走', row: 2 },
+            { id: 'sleep', name: 'Sleep', icon: '😴', desc: '睡觉', row: 3 },
+            { id: 'eat', name: 'Eat', icon: '🍖', desc: '进食', row: 4 },
+            { id: 'happy', name: 'Happy', icon: '😊', desc: '开心', row: 5 },
+            { id: 'startled', name: 'Startled', icon: '😲', desc: '受惊', row: 6 },
+            { id: 'sit', name: 'Sit', icon: '🪑', desc: '坐下', row: 7 }
+        ];
+        let uploadedImages = {};
+        let currentMode = 'single';
+        let generatedCanvas = null;
+        function init() {
+            renderStatesGrid();
+            setupEventListeners();
+        }
+        function renderStatesGrid() {
+            const grid = document.getElementById('statesGrid');
+            grid.innerHTML = STATES.map(state => `
+                <div class="state-card" id="state-${state.id}">
+                    <div class="card-header">
+                        <h4>${state.icon} ${state.name} <small>(${state.desc})</small></h4>
+                        ${state.id === 'walk_right' || state.id === 'walk_left' ? `
+                            <button class="mirror-btn" onclick="mirrorSingleState('${state.id}')" id="mirror-btn-${state.id}" disabled>
+                                🔄 镜像
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div class="frames">
+                        ${[0,1,2,3].map(i => `
+                            <div class="frame-slot" id="frame-${state.id}-${i}" 
+                                 onclick="triggerUpload('${state.id}', ${i})"
+                                 ondragover="handleDragOver(event)"
+                                 ondrop="handleDrop(event, '${state.id}', ${i})">
+                                <span class="frame-num">${i+1}</span>
+                                <button class="remove-btn" onclick="event.stopPropagation(); removeFrame('${state.id}', ${i})">×</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+        function setupEventListeners() {
+            const dropZone = document.getElementById('dropZone');
+            const fullInput = document.getElementById('fullSheetInput');
+            dropZone.addEventListener('click', () => fullInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length) handleFullSheet(e.dataTransfer.files[0]); });
+            fullInput.addEventListener('change', (e) => { if (e.target.files.length) handleFullSheet(e.target.files[0]); });
+            const autoDrop = document.getElementById('autoDropZone');
+            const autoInput = document.getElementById('autoInput');
+            autoDrop.addEventListener('click', () => autoInput.click());
+            autoDrop.addEventListener('dragover', (e) => { e.preventDefault(); autoDrop.classList.add('dragover'); });
+            autoDrop.addEventListener('dragleave', () => autoDrop.classList.remove('dragover'));
+            autoDrop.addEventListener('drop', (e) => { e.preventDefault(); autoDrop.classList.remove('dragover'); if (e.dataTransfer.files.length) handleAutoGenerate(e.dataTransfer.files[0]); });
+            autoInput.addEventListener('change', (e) => { if (e.target.files.length) handleAutoGenerate(e.target.files[0]); });
+        }
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+            document.querySelectorAll('.upload-section').forEach(section => section.classList.remove('active'));
+            document.getElementById(mode + 'Upload').classList.add('active');
+        }
+        function triggerUpload(stateId, frameIndex) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => { if (e.target.files.length) handleSingleUpload(e.target.files[0], stateId, frameIndex); };
+            input.click();
+        }
+        function handleSingleUpload(file, stateId, frameIndex) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const key = `${stateId}-${frameIndex}`;
+                    uploadedImages[key] = img;
+                    const slot = document.getElementById(`frame-${stateId}-${frameIndex}`);
+                    slot.innerHTML = `<img src="${e.target.result}" alt="${stateId} ${frameIndex}"><button class="remove-btn" onclick="event.stopPropagation(); removeFrame('${stateId}', ${frameIndex})">×</button>`;
+                    slot.classList.add('has-image');
+                    document.getElementById(`state-${stateId}`).classList.add('loaded');
+                    updateMirrorButtons();
+                    updateStatus();
+                    generatePreview();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        function removeFrame(stateId, frameIndex) {
+            const key = `${stateId}-${frameIndex}`;
+            delete uploadedImages[key];
+            const slot = document.getElementById(`frame-${stateId}-${frameIndex}`);
+            slot.innerHTML = `<span class="frame-num">${frameIndex + 1}</span><button class="remove-btn" onclick="event.stopPropagation(); removeFrame('${stateId}', ${frameIndex})">×</button>`;
+            slot.classList.remove('has-image');
+            const stateHasImages = [0,1,2,3].some(i => uploadedImages[`${stateId}-${i}`]);
+            if (!stateHasImages) document.getElementById(`state-${stateId}`).classList.remove('loaded');
+            updateMirrorButtons();
+            updateStatus();
+            generatePreview();
+        }
+        function handleFullSheet(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    clearAll();
+                    const frameW = img.width / 4;
+                    const frameH = img.height / 8;
+                    STATES.forEach((state) => {
+                        const row = state.row;
+                        for (let col = 0; col < 4; col++) {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = frameW;
+                            canvas.height = frameH;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, col * frameW, row * frameH, frameW, frameH, 0, 0, frameW, frameH);
+                            const frameImg = new Image();
+                            frameImg.src = canvas.toDataURL();
+                            const key = `${state.id}-${col}`;
+                            uploadedImages[key] = frameImg;
+                            const slot = document.getElementById(`frame-${state.id}-${col}`);
+                            slot.innerHTML = `<img src="${frameImg.src}" alt="${state.id} ${col}"><button class="remove-btn" onclick="event.stopPropagation(); removeFrame('${state.id}', ${col})">×</button>`;
+                            slot.classList.add('has-image');
+                        }
+                        document.getElementById(`state-${state.id}`).classList.add('loaded');
+                    });
+                    document.getElementById('frameWidth').value = Math.round(frameW);
+                    document.getElementById('frameHeight').value = Math.round(frameH);
+                    updateMirrorButtons();
+                    updateStatus();
+                    generatePreview();
+                    setStatus('精灵表已加载并分割');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        function handleAutoGenerate(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    clearAll();
+                    const frameW = parseInt(document.getElementById('frameWidth').value);
+                    const frameH = parseInt(document.getElementById('frameHeight').value);
+                    STATES.forEach((state) => {
+                        for (let col = 0; col < 4; col++) {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = frameW;
+                            canvas.height = frameH;
+                            const ctx = canvas.getContext('2d');
+                            const scale = Math.min(frameW / img.width, frameH / img.height) * 0.8;
+                            const x = (frameW - img.width * scale) / 2;
+                            const y = (frameH - img.height * scale) / 2;
+                            ctx.save();
+                            ctx.translate(frameW / 2, frameH / 2);
+                            applyStateTransform(ctx, state.id, col);
+                            ctx.translate(-frameW / 2, -frameH / 2);
+                            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                            ctx.restore();
+                            const frameImg = new Image();
+                            frameImg.src = canvas.toDataURL();
+                            const key = `${state.id}-${col}`;
+                            uploadedImages[key] = frameImg;
+                            const slot = document.getElementById(`frame-${state.id}-${col}`);
+                            slot.innerHTML = `<img src="${frameImg.src}" alt="${state.id} ${col}"><button class="remove-btn" onclick="event.stopPropagation(); removeFrame('${state.id}', ${col})">×</button>`;
+                            slot.classList.add('has-image');
+                        }
+                        document.getElementById(`state-${state.id}`).classList.add('loaded');
+                    });
+                    updateMirrorButtons();
+                    updateStatus();
+                    generatePreview();
+                    setStatus('已自动生成各状态动画');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        function applyStateTransform(ctx, stateId, frame) {
+            switch (stateId) {
+                case 'walk_right':
+                    ctx.translate(frame * 2, 0);
+                    break;
+                case 'walk_left':
+                    ctx.scale(-1, 1);
+                    ctx.translate(-frame * 2, 0);
+                    break;
+                case 'sleep':
+                    const sleepAngle = Math.sin(frame * Math.PI / 2) * 0.05;
+                    ctx.rotate(sleepAngle);
+                    ctx.translate(0, 2);
+                    break;
+                case 'eat':
+                    const eatBounce = Math.sin(frame * Math.PI / 2) * 4;
+                    ctx.translate(0, eatBounce);
+                    break;
+                case 'happy':
+                    const happyBounce = Math.abs(Math.sin(frame * Math.PI / 2)) * 8;
+                    const happyScale = 1 + Math.sin(frame * Math.PI / 2) * 0.1;
+                    ctx.translate(0, -happyBounce);
+                    ctx.scale(happyScale, happyScale);
+                    break;
+                case 'startled':
+                    if (frame < 2) {
+                        const shake = (frame % 2 === 0 ? -1 : 1) * 3;
+                        ctx.translate(shake, 0);
+                        ctx.scale(1.1, 0.9);
+                    }
+                    break;
+                case 'sit':
+                    const breathe = Math.sin(frame * Math.PI / 2) * 0.03;
+                    ctx.scale(1 + breathe, 1 - breathe);
+                    ctx.translate(0, 2);
+                    break;
+                default:
+                    const idleBreathe = Math.sin(frame * Math.PI / 2) * 0.02;
+                    ctx.scale(1 + idleBreathe, 1 - idleBreathe);
+                    break;
+            }
+        }
+        function mirrorState(fromId, toId) {
+            const hasImages = [0,1,2,3].some(i => uploadedImages[`${fromId}-${i}`]);
+            if (!hasImages) {
+                setStatus(`源状态 ${fromId} 没有图片，无法镜像`);
+                return;
+            }
+            for (let i = 0; i < 4; i++) {
+                const srcKey = `${fromId}-${i}`;
+                if (uploadedImages[srcKey]) {
+                    const srcImg = uploadedImages[srcKey];
+                    const canvas = document.createElement('canvas');
+                    canvas.width = srcImg.width;
+                    canvas.height = srcImg.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(srcImg, 0, 0);
+                    const mirroredImg = new Image();
+                    mirroredImg.src = canvas.toDataURL();
+                    const destKey = `${toId}-${i}`;
+                    uploadedImages[destKey] = mirroredImg;
+                    const slot = document.getElementById(`frame-${toId}-${i}`);
+                    slot.innerHTML = `<img src="${mirroredImg.src}" alt="${toId} ${i}"><button class="remove-btn" onclick="event.stopPropagation(); removeFrame('${toId}', ${i})">×</button>`;
+                    slot.classList.add('has-image');
+                }
+            }
+            document.getElementById(`state-${toId}`).classList.add('loaded');
+            updateMirrorButtons();
+            updateStatus();
+            generatePreview();
+            setStatus(`已将 ${fromId} 镜像到 ${toId}`);
+        }
+        function mirrorSingleState(stateId) {
+            const targetId = stateId === 'walk_right' ? 'walk_left' : 'walk_right';
+            mirrorState(stateId, targetId);
+        }
+        function updateMirrorButtons() {
+            const rightHasImages = [0,1,2,3].some(i => uploadedImages[`walk_right-${i}`]);
+            const leftHasImages = [0,1,2,3].some(i => uploadedImages[`walk_left-${i}`]);
+            const mirrorRtoL = document.getElementById('mirrorRtoL');
+            const mirrorLtoR = document.getElementById('mirrorLtoR');
+            const mirrorBtnRight = document.getElementById('mirror-btn-walk_right');
+            const mirrorBtnLeft = document.getElementById('mirror-btn-walk_left');
+            if (mirrorRtoL) mirrorRtoL.disabled = !rightHasImages;
+            if (mirrorLtoR) mirrorLtoR.disabled = !leftHasImages;
+            if (mirrorBtnRight) mirrorBtnRight.disabled = !rightHasImages;
+            if (mirrorBtnLeft) mirrorBtnLeft.disabled = !leftHasImages;
+        }
+        function handleDragOver(e) { e.preventDefault(); e.currentTarget.style.borderColor = '#4ecdc4'; }
+        function handleDrop(e, stateId, frameIndex) { e.preventDefault(); e.currentTarget.style.borderColor = ''; if (e.dataTransfer.files.length) handleSingleUpload(e.dataTransfer.files[0], stateId, frameIndex); }
+        function generatePreview() {
+            const canvas = document.getElementById('previewCanvas');
+            const ctx = canvas.getContext('2d');
+            const frameW = parseInt(document.getElementById('frameWidth').value);
+            const frameH = parseInt(document.getElementById('frameHeight').value);
+            const cols = parseInt(document.getElementById('framesPerRow').value);
+            canvas.width = frameW * cols;
+            canvas.height = frameH * STATES.length;
+            ctx.fillStyle = '#ff00ff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            let hasAny = false;
+            STATES.forEach((state) => {
+                for (let col = 0; col < cols; col++) {
+                    const key = `${state.id}-${col}`;
+                    if (uploadedImages[key]) {
+                        ctx.drawImage(uploadedImages[key], col * frameW, state.row * frameH, frameW, frameH);
+                        hasAny = true;
+                    }
+                }
+            });
+            canvas.classList.toggle('hidden', !hasAny);
+            document.querySelector('.preview-placeholder').classList.toggle('hidden', hasAny);
+            if (hasAny) { generatedCanvas = canvas; document.getElementById('downloadBtn').disabled = false; }
+        }
+        function generateSpriteSheet() { generatePreview(); setStatus('精灵表已生成'); }
+        function downloadSpriteSheet() {
+            if (!generatedCanvas) return;
+            const link = document.createElement('a');
+            link.download = 'pet.png';
+            link.href = generatedCanvas.toDataURL('image/png');
+            link.click();
+            setStatus('已下载 pet.png - 请替换 assets/pet.png 并修改 config.json rows 为 8');
+        }
+        function clearAll() {
+            uploadedImages = {};
+            renderStatesGrid();
+            const canvas = document.getElementById('previewCanvas');
+            canvas.classList.add('hidden');
+            document.querySelector('.preview-placeholder').classList.remove('hidden');
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('generateBtn').disabled = true;
+            generatedCanvas = null;
+            setStatus('已清空所有图片');
+        }
+        function updateStatus() {
+            const totalFrames = STATES.length * 4;
+            const loadedFrames = Object.keys(uploadedImages).length;
+            const percentage = (loadedFrames / totalFrames) * 100;
+            document.getElementById('progressBar').style.width = percentage + '%';
+            if (loadedFrames === 0) { setStatus('就绪 - 请上传图片开始制作'); }
+            else if (loadedFrames === totalFrames) { setStatus(`已完成 ${loadedFrames}/${totalFrames} 帧 - 可以生成精灵表`); document.getElementById('generateBtn').disabled = false; }
+            else { setStatus(`已上传 ${loadedFrames}/${totalFrames} 帧`); }
+        }
+        function setStatus(text) { document.getElementById('statusText').textContent = text; }
+        init();
+    </script>
+</body>
+</html>

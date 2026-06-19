@@ -1,0 +1,11 @@
+{
+  "pet_width": 128,
+  "pet_height": 128,
+  "walk_speed": 25.0,
+  "image_path": "C:\\work\\code\\desktop_pet\\assets/pet.png",
+  "frames_per_row": 4,
+  "rows": 8,
+  "anim_fps": 6.0,
+  "feed_affection_gain": 5,
+  "affection_decay_per_hour": 1
+}
