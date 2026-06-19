@@ -20,7 +20,7 @@
 双击 `index.html` 文件，在浏览器中打开生成器。
 
 ### 方式二：使用启动脚本
-运行 `启动生成器.ps1` PowerShell 脚本。
+运行 `launch_generator.ps1` PowerShell 脚本。
 
 ## 精灵表格式
 

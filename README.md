@@ -1,4 +1,4 @@
-# 🐾 桌面宠物 (Desktop Pet)
+﻿# 🐾 桌面宠物 (Desktop Pet)
 
 运行在 Windows 桌面上的像素风小宠物，以透明窗口形式存在，能在屏幕底部自由漫步并与用户互动。
 
@@ -67,6 +67,27 @@ cargo run --release
 | Row 6 | Sit（坐下） | 右键点击 | 持续3秒后恢复 |
 | Row 7 | （备用） | - | 暂未使用 |
 
+
+## 精灵表生成器
+
+项目提供了一个 Web 工具用于制作自定义桌宠精灵表：
+
+`ash
+# Windows PowerShell
+cd tools\platform
+.\launch_generator.ps1
+
+# 或直接用浏览器打开
+# tools\platform\index.html
+`
+
+功能：
+- **单张上传**：逐帧上传图片，精细控制每个动画
+- **整张上传**：上传已制作的精灵表，自动分割
+- **智能生成**：上传一张图片自动生成多帧动画
+- **镜像功能**：快速将向右行走镜像为向左行走
+
+详见 	ools/platform/README.md
 ## 配置文件
 
 路径：`config/config.json`
