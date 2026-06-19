@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.1)'
+        required: true
 
 permissions:
   contents: write
@@ -19,7 +24,7 @@ jobs:
       - name: Prepare artifact
         shell: pwsh
         run: |
-          $tag = "${{ github.ref_name }}"
+          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
           $dir = "desktop-pet-${tag}-windows-x64"
           New-Item -ItemType Directory -Path $dir
           Copy-Item target/release/desktop-pet.exe "$dir/"
@@ -42,7 +47,7 @@ jobs:
         run: cargo build --release
       - name: Prepare artifact
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
           DIR="desktop-pet-${TAG}-macos-x64"
           mkdir -p "$DIR"
           cp target/release/desktop-pet "$DIR/"
@@ -67,7 +72,7 @@ jobs:
         run: cargo build --release
       - name: Prepare artifact
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
           DIR="desktop-pet-${TAG}-linux-x64"
           mkdir -p "$DIR"
           cp target/release/desktop-pet "$DIR/"
@@ -94,5 +99,6 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           generate_release_notes: true
           files: artifacts/*
